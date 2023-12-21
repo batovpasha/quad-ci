@@ -1,15 +1,20 @@
 import           Core
 import           Prelude
 import           RIO
+import qualified RIO.NonEmpty.Partial as NonEmpty.Partial
 import           Test.Hspec
 
 -- Helper functions
 makeStep :: Text -> Text -> [Text] -> Step
 makeStep name image commands =
-  Step {name = StepName name, image = Image image, commands = commands}
+  Step
+    { name = StepName name
+    , image = Image image
+    , commands = NonEmpty.Partial.fromList commands
+    }
 
 makePipeline :: [Step] -> Pipeline
-makePipeline steps = Pipeline {steps = steps}
+makePipeline steps = Pipeline {steps = NonEmpty.Partial.fromList steps}
 
 -- Test values
 testPipeline :: Pipeline
@@ -32,17 +37,18 @@ main =
             { pipeline =
                 Pipeline
                   { steps =
-                      [ Step
-                          { name = StepName "First step"
-                          , commands = ["date"]
-                          , image = Image "ubuntu"
-                          }
-                      , Step
-                          { name = StepName "Second step"
-                          , commands = ["uname -r"]
-                          , image = Image "ubuntu"
-                          }
-                      ]
+                      NonEmpty.Partial.fromList
+                        [ Step
+                            { name = StepName "First step"
+                            , commands = NonEmpty.Partial.fromList ["date"]
+                            , image = Image "ubuntu"
+                            }
+                        , Step
+                            { name = StepName "Second step"
+                            , commands = NonEmpty.Partial.fromList ["uname -r"]
+                            , image = Image "ubuntu"
+                            }
+                        ]
                   }
             , state = BuildReady
             }
