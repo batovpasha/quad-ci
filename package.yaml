@@ -85,3 +85,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - quad-ci
+    - hspec

@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Core
       Lib
   other-modules:
       Paths_quad_ci
@@ -121,6 +122,7 @@ test-suite quad-ci-test
     , base >=4.7 && <5
     , butcher
     , hslogger
+    , hspec
     , http-client
     , http-conduit
     , http-types
