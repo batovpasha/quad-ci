@@ -1,0 +1,87 @@
+name:                quad-ci
+version:             0.1.0.0
+github:              "batovpasha/quad-ci"
+license:             MIT
+author:              "Pavlo Batov"
+maintainer:          "batovpasha@gmail.com"
+copyright:           "2023 Pavlo Batov"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/batovpasha/quad-ci#readme>
+
+dependencies:
+- aeson
+- async
+- base >= 4.7 && < 5
+- butcher
+- hslogger
+- http-client
+- http-conduit
+- http-types
+- network
+- record-hasfield
+- rio
+- scotty
+- serialise
+- stm
+- time
+- typed-process
+- wai-cors
+- yaml
+- record-dot-preprocessor
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+- -F -pgmF=record-dot-preprocessor
+
+default-extensions:
+- BlockArguments
+- DeriveAnyClass
+- DeriveGeneric
+- LambdaCase
+- NoImplicitPrelude
+- OverloadedStrings
+- StrictData
+
+library:
+  source-dirs: src
+
+executables:
+  quad-ci-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - quad-ci
+
+tests:
+  quad-ci-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - quad-ci
