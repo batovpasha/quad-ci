@@ -1,4 +1,5 @@
 import           Core
+import           Docker
 import           Prelude
 import           RIO
 import qualified RIO.NonEmpty.Partial as NonEmpty.Partial
@@ -9,7 +10,7 @@ makeStep :: Text -> Text -> [Text] -> Step
 makeStep name image commands =
   Step
     { name = StepName name
-    , image = Image image
+    , image = Docker.Image image
     , commands = NonEmpty.Partial.fromList commands
     }
 
@@ -42,12 +43,12 @@ main =
                         [ Step
                             { name = StepName "First step"
                             , commands = NonEmpty.Partial.fromList ["date"]
-                            , image = Image "ubuntu"
+                            , image = Docker.Image "ubuntu"
                             }
                         , Step
                             { name = StepName "Second step"
                             , commands = NonEmpty.Partial.fromList ["uname -r"]
-                            , image = Image "ubuntu"
+                            , image = Docker.Image "ubuntu"
                             }
                         ]
                   }
