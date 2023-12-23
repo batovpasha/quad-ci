@@ -28,6 +28,7 @@ library
       Core
       Docker
       Lib
+      Socket
   other-modules:
       Paths_quad_ci
   hs-source-dirs:
