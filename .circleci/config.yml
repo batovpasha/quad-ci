@@ -7,6 +7,17 @@ jobs:
     steps:
       - checkout
 
+      - restore_cache:
+          keys:
+            - stack-dependencies-{{ arch }}-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+
+      - run: stack build --test --bench --only-dependencies
+
+      - save_cache:
+          key: stack-dependencies-{{ arch }}-{{ checksum "stack.yaml" }}-{{ checksum "package.yaml" }}
+          paths:
+            - ~/.stack
+
       - run: stack build --test
 
 workflows:
