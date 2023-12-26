@@ -50,7 +50,7 @@ ghc-options:
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
-- -F -pgmF=record-dot-preprocessor
+- -fplugin=RecordDotPreprocessor
 
 default-extensions:
 - BlockArguments
@@ -60,6 +60,17 @@ default-extensions:
 - NoImplicitPrelude
 - OverloadedStrings
 - StrictData
+# Required for the RecordDotPreprocessor plugin:
+# https://github.com/ndmitchell/record-dot-preprocessor?tab=readme-ov-file#how-do-i-use-this-magic
+- DuplicateRecordFields
+- TypeApplications
+- FlexibleContexts
+- DataKinds
+- MultiParamTypeClasses
+- TypeSynonymInstances
+- FlexibleInstances
+- UndecidableInstances
+- GADTs
 
 library:
   source-dirs: src
