@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build-and-test:
     docker:
-      - image: fpco/stack-build-small:lts-17.10
+      - image: fpco/stack-build-small:lts-20.25
     steps:
       - checkout
 
