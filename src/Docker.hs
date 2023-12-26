@@ -13,7 +13,14 @@ data CreateContainerOptions =
 createContainer :: CreateContainerOptions -> IO ()
 createContainer options = do
   manager <- Socket.newManager "/var/run/docker.sock"
-  let body = Aeson.Null -- TODO figure out actual request body
+  let image = imageToText options.image
+  let body = Aeson.object 
+               [ ("Image", Aeson.toJSON image)
+               , ("Tty", Aeson.toJSON True)
+               , ("Labels", Aeson.object [("quad", "")])
+               , ("Cmd", "echo hello")
+               , ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
+               ]
   let req =
         HTTP.defaultRequest & HTTP.setRequestManager manager &
         HTTP.setRequestPath "/v1.40/containers/create" &
