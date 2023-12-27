@@ -7,6 +7,16 @@ import qualified Network.HTTP.Simple as HTTP
 import           RIO
 import qualified Socket
 
+data Service =
+  Service
+    { createContainer :: CreateContainerOptions -> IO ContainerId
+    , startContainer  :: ContainerId -> IO ()
+    }
+
+createService :: Service
+createService =
+  Service {createContainer = createContainer_, startContainer = startContainer_}
+
 data CreateContainerOptions =
   CreateContainerOptions
     { image :: Image
@@ -19,8 +29,8 @@ newtype ContainerId =
 containerIdToText :: ContainerId -> Text
 containerIdToText (ContainerId c) = c
 
-createContainer :: CreateContainerOptions -> IO ContainerId
-createContainer options = do
+createContainer_ :: CreateContainerOptions -> IO ContainerId
+createContainer_ options = do
   manager <- Socket.newManager "/var/run/docker.sock"
   let image = imageToText options.image
   let body =
@@ -43,8 +53,8 @@ createContainer options = do
           pure $ ContainerId cId
   parseResponse res parser
 
-startContainer :: ContainerId -> IO ()
-startContainer containerId = do
+startContainer_ :: ContainerId -> IO ()
+startContainer_ containerId = do
   manager <- Socket.newManager "/var/run/docker.sock"
   let path =
         mconcat ["/v1.40/containers/", containerIdToText containerId, "/start"]

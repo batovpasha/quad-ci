@@ -7,5 +7,6 @@ import           RIO
 
 main :: IO ()
 main = do
-  cId <- createContainer $ CreateContainerOptions (Image "ubuntu")
-  startContainer cId
+  let dockerService = createService
+  cId <- dockerService.createContainer $ CreateContainerOptions (Image "ubuntu")
+  dockerService.startContainer cId
