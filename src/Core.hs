@@ -36,11 +36,13 @@ data BuildState
 data BuildResult
   = BuildSucceeded
   | BuildFailed
+  | BuildUnexpectedState Text
   deriving (Eq, Show)
 
 data BuildRunningState =
   BuildRunningState
-    { step :: StepName
+    { step        :: StepName
+    , containerId :: Docker.ContainerId
     }
   deriving (Eq, Show)
 
@@ -84,17 +86,25 @@ progress docker build =
           let options = Docker.CreateContainerOptions step.image
           containerId <- docker.createContainer options
           docker.startContainer containerId
-          let s = BuildRunningState { step = step.name }
+          let s =
+                BuildRunningState
+                  {step = step.name, containerId = containerId}
           pure $ build {state = BuildRunning s}
-    BuildRunning state
-      -- We'll assume the container exited with a 0 status code.
-     -> do
-      let exit = Docker.ContainerExitCode 0
-          result = exitCodeToStepResult exit
-      pure
-        build
-          { state = BuildReady
-          , completedSteps =
-              Map.insert state.step result build.completedSteps
-          }
+    BuildRunning state -> do
+      status <- docker.containerStatus state.containerId
+      case status of
+        Docker.ContainerRunning -> pure build
+        Docker.ContainerExited exitCode
+         -> do
+          let result = exitCodeToStepResult exitCode
+          pure
+            build
+              { completedSteps =
+                  Map.insert state.step result build.completedSteps
+              , state = BuildReady
+              }
+        Docker.ContainerOther other
+         -> do
+          let s = BuildUnexpectedState other
+          pure build {state = BuildFinished s}
     BuildFinished _ -> undefined

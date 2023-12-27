@@ -11,11 +11,16 @@ data Service =
   Service
     { createContainer :: CreateContainerOptions -> IO ContainerId
     , startContainer  :: ContainerId -> IO ()
+    , containerStatus :: ContainerId -> IO ContainerStatus
     }
 
 createService :: Service
 createService =
-  Service {createContainer = createContainer_, startContainer = startContainer_}
+  Service
+    { createContainer = createContainer_
+    , startContainer = startContainer_
+    , containerStatus = undefined
+    }
 
 data CreateContainerOptions =
   CreateContainerOptions
@@ -80,6 +85,12 @@ newtype Image =
 
 newtype ContainerExitCode =
   ContainerExitCode Int
+  deriving (Eq, Show)
+
+data ContainerStatus
+  = ContainerRunning
+  | ContainerExited ContainerExitCode
+  | ContainerOther Text
   deriving (Eq, Show)
 
 exitCodeToInt :: ContainerExitCode -> Int
