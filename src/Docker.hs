@@ -43,6 +43,17 @@ createContainer options = do
           pure $ ContainerId cId
   parseResponse res parser
 
+startContainer :: ContainerId -> IO ()
+startContainer containerId = do
+  manager <- Socket.newManager "/var/run/docker.sock"
+  let path =
+        mconcat ["/v1.40/containers/", containerIdToText containerId, "/start"]
+  let req =
+        HTTP.defaultRequest & HTTP.setRequestManager manager &
+        HTTP.setRequestPath (encodeUtf8 path) &
+        HTTP.setRequestMethod "POST"
+  void $ HTTP.httpBS req
+
 parseResponse ::
      HTTP.Response ByteString -> (Aeson.Value -> Aeson.Types.Parser a) -> IO a
 parseResponse res parser = do
