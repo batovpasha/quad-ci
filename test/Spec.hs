@@ -51,7 +51,7 @@ testRunFailure runner = do
 main :: IO ()
 main =
   hspec $ do
-    let docker = Docker.createService
+    docker <- runIO Docker.createService
     let runner = Runner.createService docker
     beforeAll cleanupDocker $ describe "Quad CI" $ do
       it "should run a build (success)" do testRunSuccess runner
