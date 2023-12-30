@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -57,6 +57,7 @@ library
     , async
     , base >=4.7 && <5
     , butcher
+    , bytestring
     , hslogger
     , http-client
     , http-conduit
@@ -103,6 +104,7 @@ executable quad-ci-exe
     , async
     , base >=4.7 && <5
     , butcher
+    , bytestring
     , hslogger
     , http-client
     , http-conduit
@@ -151,6 +153,7 @@ test-suite quad-ci-test
     , async
     , base >=4.7 && <5
     , butcher
+    , bytestring
     , hslogger
     , hspec
     , http-client

@@ -1,9 +1,10 @@
 module Docker where
 
-import           Data.Aeson          ((.:))
-import qualified Data.Aeson          as Aeson
-import qualified Data.Aeson.Types    as Aeson.Types
-import qualified Network.HTTP.Simple as HTTP
+import           Data.Aeson                 ((.:))
+import qualified Data.Aeson                 as Aeson
+import qualified Data.Aeson.Types           as Aeson.Types
+-- import           Data.ByteString.Lazy.Char8 (putStrLn)
+import qualified Network.HTTP.Simple        as HTTP
 import           RIO
 import qualified Socket
 
@@ -27,7 +28,7 @@ createService = do
     Service
       { createContainer = createContainer_ makeReq
       , startContainer = startContainer_ makeReq
-      , containerStatus = undefined
+      , containerStatus = containerStatus_ makeReq
       }
 
 data CreateContainerOptions = CreateContainerOptions
@@ -68,6 +69,24 @@ startContainer_ makeReq containerId = do
         mconcat ["/v1.40/containers/", containerIdToText containerId, "/start"]
   let req = makeReq path & HTTP.setRequestMethod "POST"
   void $ HTTP.httpBS req
+
+containerStatus_ :: RequestBuilder -> ContainerId -> IO ContainerStatus
+containerStatus_ makeReq containerId = do
+  let parser =
+        Aeson.withObject "container-inspect" $ \o -> do
+          -- TODO: figure out how to print this object to stdout
+          -- putStrLn $ Aeson.encode o
+          state <- o .: "State"
+          status <- o .: "Status"
+          case status of
+            "running" -> pure ContainerRunning
+            "exited" -> do
+              code <- state .: "ExitCode"
+              pure $ ContainerExited (ContainerExitCode code)
+            other -> pure $ ContainerOther other
+  let req = makeReq $ "/containers" <> containerIdToText containerId <> "/json"
+  res <- HTTP.httpBS req
+  parseResponse res parser
 
 parseResponse ::
      HTTP.Response ByteString -> (Aeson.Value -> Aeson.Types.Parser a) -> IO a
