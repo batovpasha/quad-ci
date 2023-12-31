@@ -1,10 +1,10 @@
 module Docker where
 
-import           Data.Aeson                 ((.:))
-import qualified Data.Aeson                 as Aeson
-import qualified Data.Aeson.Types           as Aeson.Types
--- import           Data.ByteString.Lazy.Char8 (putStrLn)
-import qualified Network.HTTP.Simple        as HTTP
+import           Data.Aeson            ((.:))
+import qualified Data.Aeson            as Aeson
+import qualified Data.Aeson.Types      as Aeson.Types
+import           Data.ByteString.Char8 (putStrLn)
+import qualified Network.HTTP.Simple   as HTTP
 import           RIO
 import qualified Socket
 
@@ -74,8 +74,6 @@ containerStatus_ :: RequestBuilder -> ContainerId -> IO ContainerStatus
 containerStatus_ makeReq containerId = do
   let parser =
         Aeson.withObject "container-inspect" $ \o -> do
-          -- TODO: figure out how to print this object to stdout
-          -- putStrLn $ Aeson.encode o
           state <- o .: "State"
           status <- o .: "Status"
           case status of
@@ -91,8 +89,11 @@ containerStatus_ makeReq containerId = do
 parseResponse ::
      HTTP.Response ByteString -> (Aeson.Value -> Aeson.Types.Parser a) -> IO a
 parseResponse res parser = do
+  let body = HTTP.getResponseBody res
+  -- TODO: log action name to have context: createContainer, startContainer, containerStatus
+  putStrLn $ "Response body:\n" <> body
   let result = do
-        value <- Aeson.eitherDecodeStrict (HTTP.getResponseBody res)
+        value <- Aeson.eitherDecodeStrict body
         Aeson.Types.parseEither parser value
   case result of
     Left e       -> throwString e

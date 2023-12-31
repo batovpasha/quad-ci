@@ -10,3 +10,5 @@ main = do
   dockerService <- createService
   cId <- dockerService.createContainer $ CreateContainerOptions (Image "ubuntu")
   dockerService.startContainer cId
+  dockerService.containerStatus cId
+  return ()
