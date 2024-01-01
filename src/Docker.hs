@@ -65,8 +65,7 @@ createContainer_ makeReq options = do
 
 startContainer_ :: RequestBuilder -> ContainerId -> IO ()
 startContainer_ makeReq containerId = do
-  let path =
-        mconcat ["/v1.40/containers/", containerIdToText containerId, "/start"]
+  let path = mconcat ["/containers/", containerIdToText containerId, "/start"]
   let req = makeReq path & HTTP.setRequestMethod "POST"
   void $ HTTP.httpBS req
 
@@ -75,14 +74,16 @@ containerStatus_ makeReq containerId = do
   let parser =
         Aeson.withObject "container-inspect" $ \o -> do
           state <- o .: "State"
-          status <- o .: "Status"
+          status <- state .: "Status"
           case status of
             "running" -> pure ContainerRunning
             "exited" -> do
               code <- state .: "ExitCode"
               pure $ ContainerExited (ContainerExitCode code)
             other -> pure $ ContainerOther other
-  let req = makeReq $ "/containers" <> containerIdToText containerId <> "/json"
+  let req =
+        makeReq $
+        mconcat ["/containers/", containerIdToText containerId, "/json"]
   res <- HTTP.httpBS req
   parseResponse res parser
 
