@@ -10,7 +10,8 @@ main = do
   dockerService <- Docker.createService
   cId <-
     dockerService.createContainer $
-    Docker.CreateContainerOptions (Docker.Image "ubuntu")
+    Docker.CreateContainerOptions
+      {image = (Docker.Image "ubuntu"), script = "echo 'ok'"}
   dockerService.startContainer cId
   dockerService.containerStatus cId
   return ()

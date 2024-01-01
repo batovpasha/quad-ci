@@ -32,7 +32,8 @@ createService = do
       }
 
 data CreateContainerOptions = CreateContainerOptions
-  { image :: Image
+  { image  :: Image
+  , script :: Text
   }
 
 newtype ContainerId =
@@ -50,7 +51,8 @@ createContainer_ makeReq options = do
           [ ("Image", Aeson.toJSON imageName)
           , ("Tty", Aeson.toJSON True)
           , ("Labels", Aeson.object [("quad", "")])
-          , ("Cmd", "echo hello")
+          , ("Cmd", "echo \"$QUAD_SCRIPT\" | /bin/sh")
+          , ("Env", Aeson.toJSON ["QUAD_SCRIPT=" <> options.script])
           , ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
           ]
   let req =
