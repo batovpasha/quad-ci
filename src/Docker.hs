@@ -81,9 +81,8 @@ containerStatus_ makeReq containerId = do
               code <- state .: "ExitCode"
               pure $ ContainerExited (ContainerExitCode code)
             other -> pure $ ContainerOther other
-  let req =
-        makeReq $
-        mconcat ["/containers/", containerIdToText containerId, "/json"]
+  let path = mconcat ["/containers/", containerIdToText containerId, "/json"]
+  let req = makeReq path
   res <- HTTP.httpBS req
   parseResponse res parser
 
