@@ -55,15 +55,16 @@ createContainer_ makeReq options = do
           , ("Env", Aeson.toJSON ["QUAD_SCRIPT=" <> options.script])
           , ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
           ]
+  let path = "/containers/create"
   let req =
-        makeReq "/containers/create" & HTTP.setRequestMethod "POST" &
+        makeReq path & HTTP.setRequestMethod "POST" &
         HTTP.setRequestBodyJSON body
   res <- HTTP.httpBS req
   let parser =
         Aeson.withObject "create-container" $ \o -> do
           cId <- o .: "Id"
           pure $ ContainerId cId
-  parseResponse res parser
+  parseResponse res parser path
 
 startContainer_ :: RequestBuilder -> ContainerId -> IO ()
 startContainer_ makeReq containerId = do
@@ -86,14 +87,18 @@ containerStatus_ makeReq containerId = do
   let path = mconcat ["/containers/", containerIdToText containerId, "/json"]
   let req = makeReq path
   res <- HTTP.httpBS req
-  parseResponse res parser
+  parseResponse res parser path
 
 parseResponse ::
-     HTTP.Response ByteString -> (Aeson.Value -> Aeson.Types.Parser a) -> IO a
-parseResponse res parser = do
+     HTTP.Response ByteString
+  -> (Aeson.Value -> Aeson.Types.Parser a)
+  -> Text -- ^ path is only for debugging purposes
+  -> IO a
+parseResponse res parser path = do
   let body = HTTP.getResponseBody res
-  -- TODO: log action name to have context: createContainer, startContainer, containerStatus
-  putStrLn $ "Response body:\n" <> body
+  -- TODO: pretty print the json body
+  putStrLn $
+    "Response body from the " <> encodeUtf8 path <> " endpoint:\n" <> body
   let result = do
         value <- Aeson.eitherDecodeStrict body
         Aeson.Types.parseEither parser value
