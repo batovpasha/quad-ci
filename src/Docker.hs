@@ -44,10 +44,10 @@ containerIdToText (ContainerId c) = c
 
 createContainer_ :: RequestBuilder -> CreateContainerOptions -> IO ContainerId
 createContainer_ makeReq options = do
-  let image = imageToText options.image
+  let imageName = imageToText options.image
   let body =
         Aeson.object
-          [ ("Image", Aeson.toJSON image)
+          [ ("Image", Aeson.toJSON imageName)
           , ("Tty", Aeson.toJSON True)
           , ("Labels", Aeson.object [("quad", "")])
           , ("Cmd", "echo hello")
@@ -117,4 +117,4 @@ exitCodeToInt :: ContainerExitCode -> Int
 exitCodeToInt (ContainerExitCode code) = code
 
 imageToText :: Image -> Text
-imageToText (Image image) = image
+imageToText (Image imageName) = imageName

@@ -1,31 +1,25 @@
 module Core where
 
-import           Docker
+import qualified Docker
 import           RIO
 import qualified RIO.List as List
 import qualified RIO.Map  as Map
 
-data Pipeline =
-  Pipeline
-    { steps :: NonEmpty Step
-    }
-  deriving (Eq, Show)
+data Pipeline = Pipeline
+  { steps :: NonEmpty Step
+  } deriving (Eq, Show)
 
-data Step =
-  Step
-    { name     :: StepName
-    , commands :: NonEmpty Text
-    , image    :: Docker.Image
-    }
-  deriving (Eq, Show)
+data Step = Step
+  { name     :: StepName
+  , commands :: NonEmpty Text
+  , image    :: Docker.Image
+  } deriving (Eq, Show)
 
-data Build =
-  Build
-    { pipeline       :: Pipeline
-    , state          :: BuildState
-    , completedSteps :: Map StepName StepResult
-    }
-  deriving (Eq, Show)
+data Build = Build
+  { pipeline       :: Pipeline
+  , state          :: BuildState
+  , completedSteps :: Map StepName StepResult
+  } deriving (Eq, Show)
 
 data BuildState
   = BuildReady
@@ -39,12 +33,10 @@ data BuildResult
   | BuildUnexpectedState Text
   deriving (Eq, Show)
 
-data BuildRunningState =
-  BuildRunningState
-    { step        :: StepName
-    , containerId :: Docker.ContainerId
-    }
-  deriving (Eq, Show)
+data BuildRunningState = BuildRunningState
+  { step        :: StepName
+  , containerId :: Docker.ContainerId
+  } deriving (Eq, Show)
 
 newtype StepName =
   StepName Text
@@ -94,8 +86,7 @@ progress docker build =
       status <- docker.containerStatus state.containerId
       case status of
         Docker.ContainerRunning -> pure build
-        Docker.ContainerExited exitCode
-         -> do
+        Docker.ContainerExited exitCode -> do
           let result = exitCodeToStepResult exitCode
           pure
             build
@@ -103,8 +94,7 @@ progress docker build =
                   Map.insert state.step result build.completedSteps
               , state = BuildReady
               }
-        Docker.ContainerOther other
-         -> do
+        Docker.ContainerOther other -> do
           let s = BuildUnexpectedState other
           pure build {state = BuildFinished s}
     BuildFinished _ -> undefined

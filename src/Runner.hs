@@ -24,5 +24,5 @@ runBuild_ docker build = do
       runBuild_ docker newBuild
 
 prepareBuild_ :: Docker.Service -> Pipeline -> IO Build
-prepareBuild_ docker pipeline = do
+prepareBuild_ _ pipeline = do
   pure Build {pipeline = pipeline, state = BuildReady, completedSteps = mempty}

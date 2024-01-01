@@ -2,13 +2,15 @@ module Main
   ( main
   ) where
 
-import           Docker
+import qualified Docker
 import           RIO
 
 main :: IO ()
 main = do
-  dockerService <- createService
-  cId <- dockerService.createContainer $ CreateContainerOptions (Image "ubuntu")
+  dockerService <- Docker.createService
+  cId <-
+    dockerService.createContainer $
+    Docker.CreateContainerOptions (Docker.Image "ubuntu")
   dockerService.startContainer cId
   dockerService.containerStatus cId
   return ()

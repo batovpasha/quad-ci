@@ -1,4 +1,4 @@
-module Socket where
+module Socket(newManager) where
 
 import qualified Network.HTTP.Client          as Client
 import qualified Network.HTTP.Client.Internal as Client.Internal
