@@ -36,6 +36,7 @@ createService = do
 data CreateContainerOptions = CreateContainerOptions
   { image  :: Image
   , script :: Text
+  , volume :: Volume
   }
 
 newtype ContainerId =
@@ -48,6 +49,8 @@ containerIdToText (ContainerId c) = c
 createContainer_ :: RequestBuilder -> CreateContainerOptions -> IO ContainerId
 createContainer_ makeReq options = do
   let imageName = imageToText options.image
+  let workDir = "/app"
+  let bind = volumeToText options.volume <> ":" <> workDir
   let body =
         Aeson.object
           [ ("Image", Aeson.toJSON imageName)
@@ -56,6 +59,8 @@ createContainer_ makeReq options = do
           , ("Cmd", "echo \"$QUAD_SCRIPT\" | /bin/sh")
           , ("Env", Aeson.toJSON ["QUAD_SCRIPT=" <> options.script])
           , ("Entrypoint", Aeson.toJSON [Aeson.String "/bin/sh", "-c"])
+          , ("WorkingDir", Aeson.toJSON workDir)
+          , ("HostConfig", Aeson.object [("Binds", Aeson.toJSON [bind])])
           ]
   let path = "/containers/create"
   let req =
