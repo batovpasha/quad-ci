@@ -48,11 +48,25 @@ testRunFailure runner = do
   Map.elems result.completedSteps `shouldBe`
     [StepFailed (Docker.ContainerExitCode 1)]
 
+testSharedWorkspace :: Runner.Service -> IO ()
+testSharedWorkspace runner = do
+  build <-
+    runner.prepareBuild $
+    makePipeline
+      [ makeStep "Create file" "ubuntu" ["echo hello > text.txt"]
+      , makeStep "Read file" "ubuntu" ["cat text.txt"]
+      ]
+  result <- runner.runBuild build
+  result.state `shouldBe` BuildFinished BuildSucceeded
+  Map.elems result.completedSteps `shouldBe` [StepSucceeded, StepSucceeded]
+
 main :: IO ()
 main =
   hspec $ do
     docker <- runIO Docker.createService
     let runner = Runner.createService docker
-    beforeAll cleanupDocker $ describe "Quad CI" $ do
-      it "should run a build (success)" do testRunSuccess runner
-      it "should run a build (failure)" do testRunFailure runner
+    beforeAll cleanupDocker $
+      describe "Quad CI" $ do
+        it "should run a build (success)" do testRunSuccess runner
+        it "should run a build (failure)" do testRunFailure runner
+        it "should share workspace between steps" do testSharedWorkspace runner
