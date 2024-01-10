@@ -4,6 +4,7 @@ import           Data.Aeson            ((.:))
 import qualified Data.Aeson            as Aeson
 import qualified Data.Aeson.Types      as Aeson.Types
 import           Data.ByteString.Char8 (putStrLn)
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Network.HTTP.Simple   as HTTP
 import           RIO
 import qualified Socket
@@ -13,6 +14,7 @@ data Service = Service
   , startContainer  :: ContainerId -> IO ()
   , containerStatus :: ContainerId -> IO ContainerStatus
   , createVolume    :: IO Volume
+  , fetchLogs       :: FetchLogsOptions -> IO ByteString
   }
 
 type RequestBuilder = Text -> HTTP.Request
@@ -31,6 +33,7 @@ createService = do
       , startContainer = startContainer_ makeReq
       , containerStatus = containerStatus_ makeReq
       , createVolume = createVolume_ makeReq
+      , fetchLogs = undefined -- TODO
       }
 
 data CreateContainerOptions = CreateContainerOptions
@@ -153,3 +156,9 @@ createVolume_ makeReq = do
           pure $ Volume name
   res <- HTTP.httpBS req
   parseResponse res parser path
+
+data FetchLogsOptions = FetchLogsOptions
+  { containerId :: ContainerId
+  , since       :: Time.POSIXTime
+  , until       :: Time.POSIXTime
+  }

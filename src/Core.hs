@@ -1,11 +1,12 @@
 module Core where
 
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Docker
 import           RIO
-import qualified RIO.List     as List
-import qualified RIO.Map      as Map
-import qualified RIO.NonEmpty as NonEmpty
-import qualified RIO.Text     as Text
+import qualified RIO.List              as List
+import qualified RIO.Map               as Map
+import qualified RIO.NonEmpty          as NonEmpty
+import qualified RIO.Text              as Text
 
 data Pipeline = Pipeline
   { steps :: NonEmpty Step
@@ -53,6 +54,19 @@ data StepResult
   | StepSucceeded
   deriving (Eq, Show)
 
+type LogCollection = Map StepName CollectionStatus
+
+data CollectionStatus
+  = CollectionReady
+  | CollectingLogs Docker.ContainerId Time.POSIXTime
+  | CollectionFinished
+  deriving (Eq, Show)
+
+data Log = Log
+  { output :: ByteString
+  , step   :: StepName
+  } deriving (Eq, Show)
+
 exitCodeToStepResult :: Docker.ContainerExitCode -> StepResult
 exitCodeToStepResult exit =
   if Docker.exitCodeToInt exit == 0
@@ -82,7 +96,10 @@ progress docker build =
                 Text.unlines $ ["set -ex"] <> NonEmpty.toList step.commands
           let options =
                 Docker.CreateContainerOptions
-                  {image = step.image, script = script, volume = build.volume}
+                  { image = step.image
+                  , script = script
+                  , volume = build.volume
+                  }
           containerId <- docker.createContainer options
           docker.startContainer containerId
           let s =
@@ -105,3 +122,31 @@ progress docker build =
           let s = BuildUnexpectedState other
           pure build {state = BuildFinished s}
     BuildFinished _ -> undefined
+
+initLogCollection :: Pipeline -> LogCollection
+initLogCollection pipeline = Map.fromList $ NonEmpty.toList steps
+  where
+    steps = (\step -> (step.name, CollectionReady)) <$> pipeline.steps
+
+collectLogs ::
+     Docker.Service -> LogCollection -> Build -> IO (LogCollection, [Log])
+collectLogs docker collection build = do
+  undefined -- TODO
+
+updateCollection ::
+     BuildState -> Time.POSIXTime -> LogCollection -> LogCollection
+updateCollection state lastCollectionTime collection =
+  Map.mapWithKey f collection
+  where
+    f step state =
+      case state of
+        CollectionReady    -> update step 0 CollectionReady
+        CollectingLogs _ _ -> update step lastCollectionTime CollectionFinished
+        CollectionFinished -> CollectionFinished
+    update step since nextState =
+      case state of
+        BuildRunning state ->
+          if state.step == step
+            then CollectingLogs state.containerId since
+            else nextState
+        _ -> nextState
