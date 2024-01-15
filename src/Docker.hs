@@ -33,7 +33,7 @@ createService = do
       , startContainer = startContainer_ makeReq
       , containerStatus = containerStatus_ makeReq
       , createVolume = createVolume_ makeReq
-      , fetchLogs = undefined -- TODO
+      , fetchLogs = fetchLogs_ makeReq
       }
 
 data CreateContainerOptions = CreateContainerOptions
@@ -162,3 +162,15 @@ data FetchLogsOptions = FetchLogsOptions
   , since       :: Time.POSIXTime
   , until       :: Time.POSIXTime
   }
+
+fetchLogs_ :: RequestBuilder -> FetchLogsOptions -> IO ByteString
+fetchLogs_ makeReq options = do
+  let timestampToText t = tshow (round t :: Int)
+  let url =
+        "/containers/" <>
+        containerIdToText options.containerId <>
+        "/logs?stdout=true&stderr=true&since=" <>
+        timestampToText options.since <>
+        "&until=" <> timestampToText options.until
+  res <- HTTP.httpBS $ makeReq url
+  pure $ HTTP.getResponseBody res
