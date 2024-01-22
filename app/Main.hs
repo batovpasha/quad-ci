@@ -12,7 +12,10 @@ main = do
   cId <-
     dockerService.createContainer $
     Docker.CreateContainerOptions
-      {image = (Docker.Image "ubuntu"), script = "echo 'ok'", volume = volume}
+      { image = (Docker.Image {name = "ubuntu", tag = "latest"})
+      , script = "echo 'ok'"
+      , volume = volume
+      }
   dockerService.startContainer cId
   dockerService.containerStatus cId
   return ()

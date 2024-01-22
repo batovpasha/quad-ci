@@ -100,6 +100,7 @@ progress docker build =
                   , script = script
                   , volume = build.volume
                   }
+          docker.pullImage step.image
           containerId <- docker.createContainer options
           docker.startContainer containerId
           let s =

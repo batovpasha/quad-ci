@@ -15,6 +15,7 @@ data Service = Service
   , containerStatus :: ContainerId -> IO ContainerStatus
   , createVolume    :: IO Volume
   , fetchLogs       :: FetchLogsOptions -> IO ByteString
+  , pullImage       :: Image -> IO ()
   }
 
 type RequestBuilder = Text -> HTTP.Request
@@ -34,6 +35,7 @@ createService = do
       , containerStatus = containerStatus_ makeReq
       , createVolume = createVolume_ makeReq
       , fetchLogs = fetchLogs_ makeReq
+      , pullImage = pullImage_ makeReq
       }
 
 data CreateContainerOptions = CreateContainerOptions
@@ -116,9 +118,10 @@ parseResponse res parser path = do
     Left e       -> throwString e
     Right status -> pure status
 
-newtype Image =
-  Image Text
-  deriving (Eq, Show)
+data Image = Image
+  { name :: Text
+  , tag  :: Text
+  } deriving (Eq, Show)
 
 newtype ContainerExitCode =
   ContainerExitCode Int
@@ -134,7 +137,7 @@ exitCodeToInt :: ContainerExitCode -> Int
 exitCodeToInt (ContainerExitCode code) = code
 
 imageToText :: Image -> Text
-imageToText (Image imageName) = imageName
+imageToText image = image.name <> ":" <> image.tag
 
 newtype Volume =
   Volume Text
@@ -174,3 +177,10 @@ fetchLogs_ makeReq options = do
         "&until=" <> timestampToText options.until
   res <- HTTP.httpBS $ makeReq url
   pure $ HTTP.getResponseBody res
+
+pullImage_ :: RequestBuilder -> Image -> IO ()
+pullImage_ makeReq image = do
+  let url =
+        "/images/create?tag=" <> image.tag <> "&fromImage=" <> image.name
+  let req = makeReq url & HTTP.setRequestMethod "POST"
+  void $ HTTP.httpBS req

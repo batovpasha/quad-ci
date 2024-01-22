@@ -2,10 +2,10 @@ import           Core
 import           Docker
 import           Prelude
 import           RIO
+import qualified RIO.ByteString       as ByteString
 import qualified RIO.Map              as Map
-import qualified RIO.Set              as Set
 import qualified RIO.NonEmpty.Partial as NonEmpty.Partial
-import qualified RIO.ByteString as ByteString
+import qualified RIO.Set              as Set
 import qualified Runner
 import qualified System.Process.Typed as Process
 import           Test.Hspec
@@ -23,7 +23,7 @@ makeStep :: Text -> Text -> [Text] -> Step
 makeStep name image commands =
   Step
     { name = StepName name
-    , image = Docker.Image image
+    , image = Docker.Image {name = image, tag = "latest"}
     , commands = NonEmpty.Partial.fromList commands
     }
 
@@ -76,7 +76,7 @@ testLogCollection runner = do
         forM_ remaining $ \word -> do
           case ByteString.breakSubstring word log.output of
             (_, "") -> pure ()
-            _ -> modifyMVar_ expected (pure . Set.delete word)
+            _       -> modifyMVar_ expected (pure.Set.delete word)
   let hooks = Runner.Hooks {logCollected = onLog}
   build <-
     runner.prepareBuild $
@@ -89,6 +89,16 @@ testLogCollection runner = do
   Map.elems result.completedSteps `shouldBe` [StepSucceeded, StepSucceeded]
   readMVar expected >>= \logs -> logs `shouldBe` Set.empty
 
+testImagePull :: Runner.Service -> IO ()
+testImagePull runner = do
+  Process.readProcessStdout "docker rmi -f busybox"
+  build <-
+    runner.prepareBuild $
+    makePipeline [makeStep "First step" "busybox" ["date"]]
+  result <- runner.runBuild emptyHooks build
+  result.state `shouldBe` BuildFinished BuildSucceeded
+  Map.elems result.completedSteps `shouldBe` [StepSucceeded]
+
 main :: IO ()
 main =
   hspec $ do
@@ -100,3 +110,4 @@ main =
         it "should run a build (failure)" do testRunFailure runner
         it "should share workspace between steps" do testSharedWorkspace runner
         it "should collect logs" do testLogCollection runner
+        it "should pull image" do testImagePull runner
