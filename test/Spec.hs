@@ -1,4 +1,5 @@
 import           Core
+import qualified Data.Yaml            as Yaml
 import           Docker
 import           Prelude
 import           RIO
@@ -99,6 +100,13 @@ testImagePull runner = do
   result.state `shouldBe` BuildFinished BuildSucceeded
   Map.elems result.completedSteps `shouldBe` [StepSucceeded]
 
+testYamlDecoding :: Runner.Service -> IO ()
+testYamlDecoding runner = do
+  pipeline <- Yaml.decodeFileThrow "test/pipeline.sample.yml"
+  build <- runner.prepareBuild pipeline
+  result <- runner.runBuild emptyHooks build
+  result.state `shouldBe` BuildFinished BuildSucceeded
+
 main :: IO ()
 main =
   hspec $ do
@@ -111,3 +119,4 @@ main =
         it "should share workspace between steps" do testSharedWorkspace runner
         it "should collect logs" do testLogCollection runner
         it "should pull image" do testImagePull runner
+        it "should decode yaml config into pipeline" do testYamlDecoding runner
