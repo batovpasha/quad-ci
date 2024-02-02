@@ -31,6 +31,7 @@ library
       JobHandler
       Lib
       Runner
+      Server
       Socket
   other-modules:
       Paths_quad_ci

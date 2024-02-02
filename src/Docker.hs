@@ -1,5 +1,6 @@
 module Docker where
 
+import qualified Codec.Serialise       as Serialise
 import           Data.Aeson            ((.:))
 import qualified Data.Aeson            as Aeson
 import qualified Data.Aeson.Types      as Aeson.Types
@@ -48,7 +49,7 @@ data CreateContainerOptions = CreateContainerOptions
 
 newtype ContainerId =
   ContainerId Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 containerIdToText :: ContainerId -> Text
 containerIdToText (ContainerId c) = c
@@ -123,18 +124,19 @@ parseResponse res parser path = do
 data Image = Image
   { name :: Text
   , tag  :: Text
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, Serialise.Serialise)
 
 instance Aeson.FromJSON Image where
-  parseJSON = Aeson.withText "parse-image" $ \image -> do
-    case Text.Partial.splitOn ":" image of
-      [name] -> pure $ Image { name = name, tag = "latest" }
-      [name, tag] -> pure $ Image { name = name, tag = tag }
-      _ -> fail $ "Image has too many colons " <> Text.unpack image
+  parseJSON =
+    Aeson.withText "parse-image" $ \image -> do
+      case Text.Partial.splitOn ":" image of
+        [name]      -> pure $ Image {name = name, tag = "latest"}
+        [name, tag] -> pure $ Image {name = name, tag = tag}
+        _           -> fail $ "Image has too many colons " <> Text.unpack image
 
 newtype ContainerExitCode =
   ContainerExitCode Int
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 data ContainerStatus
   = ContainerRunning
@@ -150,7 +152,7 @@ imageToText image = image.name <> ":" <> image.tag
 
 newtype Volume =
   Volume Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, Serialise.Serialise)
 
 volumeToText :: Volume -> Text
 volumeToText (Volume v) = v
