@@ -68,6 +68,13 @@ data Log = Log
   , step   :: StepName
   } deriving (Eq, Show)
 
+newtype BuildNumber =
+  BuildNumber Int
+  deriving (Eq, Show)
+
+buildNumberToInt :: BuildNumber -> Int
+buildNumberToInt (BuildNumber n) = n
+
 exitCodeToStepResult :: Docker.ContainerExitCode -> StepResult
 exitCodeToStepResult exit =
   if Docker.exitCodeToInt exit == 0
