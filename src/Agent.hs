@@ -5,6 +5,7 @@ import           Core
 import qualified Network.HTTP.Simple as HTTP
 import           RIO
 import qualified Runner
+import qualified System.Log.Logger   as Logger
 
 data Cmd =
   StartBuild BuildNumber Pipeline
@@ -28,7 +29,9 @@ run config runner =
              HTTP.setRequestPath "/agent/pull"
        res <- HTTP.httpLBS req
        let cmd = Serialise.deserialise (HTTP.getResponseBody res) :: Maybe Cmd
-       traverse_ (runCommand runner) cmd
+       traverse_ (runCommand runner) cmd `catch` \e -> do
+         Logger.warningM "quad.agent" "Server offline, waiting..."
+         Logger.warningM "quad.agent" $ show (e :: HTTP.HttpException)
        threadDelay (1 * 1000 * 1000)
 
 runCommand :: Runner.Service -> Cmd -> IO ()

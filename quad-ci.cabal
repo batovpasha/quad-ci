@@ -29,6 +29,7 @@ library
       Core
       Docker
       JobHandler
+      JobHandler.Memory
       Lib
       Runner
       Server

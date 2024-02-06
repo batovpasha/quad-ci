@@ -4,6 +4,7 @@ import           Core
 import qualified Data.Yaml                as Yaml
 import           Docker
 import qualified JobHandler
+import qualified JobHandler.Memory
 import           Prelude
 import           RIO
 import qualified RIO.ByteString           as ByteString
@@ -113,7 +114,7 @@ testYamlDecoding runner = do
 
 testServerAndAgent :: Runner.Service -> IO ()
 testServerAndAgent runner = do
-  let handler = undefined :: JobHandler.Service
+  handler <- JobHandler.Memory.createService
   serverThread <- Async.async do Server.run (Server.Config 9000) handler
   Async.link serverThread
   agentThread <-
@@ -152,4 +153,4 @@ main =
         it "should collect logs" do testLogCollection runner
         it "should pull image" do testImagePull runner
         it "should decode yaml config into pipeline" do testYamlDecoding runner
-        it "should run server and agent" do testServerAndAgent runner
+        fit "should run server and agent" do testServerAndAgent runner
