@@ -6,6 +6,7 @@ import           RIO
 
 data Hooks = Hooks
   { logCollected :: Log -> IO ()
+  , buildUpdated :: Build -> IO ()
   }
 
 data Service = Service
@@ -26,6 +27,7 @@ runBuild_ docker hooks build = do
       (newCollection, logs) <- Core.collectLogs docker collection build
       traverse_ hooks.logCollected logs
       newBuild <- Core.progress docker build
+      hooks.buildUpdated newBuild
       case newBuild.state of
         BuildFinished _ -> pure newBuild
         _ -> do

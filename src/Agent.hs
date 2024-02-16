@@ -38,6 +38,8 @@ runCommand :: Runner.Service -> Cmd -> IO ()
 runCommand runner cmd =
   case cmd of
     StartBuild number pipeline -> do
-      let hooks = Runner.Hooks {logCollected = traceShowIO}
+      let hooks =
+            Runner.Hooks
+              {logCollected = traceShowIO, buildUpdated = traceShowIO}
       build <- runner.prepareBuild pipeline
       void $ runner.runBuild hooks build

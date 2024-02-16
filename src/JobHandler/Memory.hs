@@ -11,12 +11,13 @@ import qualified RIO.Map                as Map
 
 data State = State
   { jobs      :: Map BuildNumber JobHandler.Job
+  , logs      :: Map (BuildNumber, StepName) ByteString
   , nextBuild :: Int
   } deriving (Eq, Show)
 
 createService :: IO JobHandler.Service
 createService = do
-  state <- STM.newTVarIO State {jobs = mempty, nextBuild = 1}
+  state <- STM.newTVarIO State {jobs = mempty, logs = mempty, nextBuild = 1}
   pure
     JobHandler.Service
       { queueJob =
@@ -28,7 +29,8 @@ createService = do
               s <- STM.readTVar state
               pure $ findJob_ number s
       , dispatchCmd = STM.atomically do STM.stateTVar state dispatchCmd_
-      , processMsg = \_ -> undefined
+      , processMsg =
+          \msg -> STM.atomically do STM.modifyTVar' state $ processMsg_ msg
       }
 
 queueJob_ :: Pipeline -> State -> (BuildNumber, State)
@@ -56,3 +58,14 @@ dispatchCmd_ state =
     _ -> (Nothing, state)
   where
     isQueued (_, job) = job.state == JobHandler.JobQueued
+
+processMsg_ :: Agent.Msg -> State -> State
+processMsg_ msg state =
+  case msg of
+    Agent.BuildUpdated number build ->
+      let f job = job{state = JobHandler.JobScheduled build}
+       in state{jobs = Map.adjust f number state.jobs}
+    Agent.LogCollected number log ->
+      let updatedLogs =
+            Map.insertWith (flip mappend) (number, log.step) log.output state.logs
+       in state{logs = updatedLogs}
