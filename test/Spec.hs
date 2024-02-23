@@ -37,7 +37,7 @@ makePipeline :: [Step] -> Pipeline
 makePipeline steps = Pipeline {steps = NonEmpty.Partial.fromList steps}
 
 emptyHooks :: Runner.Hooks
-emptyHooks = Runner.Hooks {logCollected = \_ -> pure ()}
+emptyHooks = Runner.Hooks {logCollected = \_ -> pure (), buildUpdated = \_ -> pure ()}
 
 testRunSuccess :: Runner.Service -> IO ()
 testRunSuccess runner = do
@@ -83,7 +83,7 @@ testLogCollection runner = do
           case ByteString.breakSubstring word log.output of
             (_, "") -> pure ()
             _       -> modifyMVar_ expected (pure.Set.delete word)
-  let hooks = Runner.Hooks {logCollected = onLog}
+  let hooks = Runner.Hooks {logCollected = onLog, buildUpdated = traceShowIO}
   build <-
     runner.prepareBuild $
     makePipeline
@@ -153,4 +153,4 @@ main =
         it "should collect logs" do testLogCollection runner
         it "should pull image" do testImagePull runner
         it "should decode yaml config into pipeline" do testYamlDecoding runner
-        fit "should run server and agent" do testServerAndAgent runner
+        it "should run server and agent" do testServerAndAgent runner
