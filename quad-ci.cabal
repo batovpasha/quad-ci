@@ -28,6 +28,7 @@ library
       Agent
       Core
       Docker
+      Github
       JobHandler
       JobHandler.Memory
       Lib

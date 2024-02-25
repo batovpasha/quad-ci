@@ -4,7 +4,10 @@ import qualified Codec.Serialise as Serialise
 import           Core
 import qualified JobHandler
 import           RIO
+import qualified RIO.NonEmpty    as NonEmpty
 import qualified Web.Scotty      as Scotty
+import qualified Github
+import qualified Data.Aeson      as Aeson
 
 data Config = Config
   { port :: Int
@@ -22,3 +25,16 @@ run config handler =
       Scotty.liftAndCatchIO do
         handler.processMsg msg
       Scotty.json ("Message processed" :: Text)
+    Scotty.post "/webhook/github" do
+      body <- Scotty.body
+      number <- Scotty.liftAndCatchIO do
+        info <- Github.parsePushEvent (toStrictBytes body)
+        pipeline <- Github.fetchRemotePipeline info
+        let repoCloneStep = Github.createCloneStep info
+        let pipelineWithCloneStep = pipeline{steps = NonEmpty.cons repoCloneStep pipeline.steps}
+        handler.queueJob pipelineWithCloneStep
+      Scotty.json $
+        Aeson.object
+        [ ("number", Aeson.toJSON $ Core.buildNumberToInt number)
+        , ("status", "job queued")
+        ]

@@ -15,6 +15,12 @@ import qualified Runner
 import qualified Server
 import qualified System.Process.Typed     as Process
 import           Test.Hspec
+import qualified Data.Aeson               as Aeson
+import qualified Data.Aeson.KeyMap        as Aeson.KeyMap
+import           Data.Aeson ((.:))
+import qualified Data.Aeson.Types         as Aeson.Types
+import qualified Network.HTTP.Simple      as HTTP
+import qualified RIO.HashMap              as HashMap
 
 cleanupDocker :: IO ()
 cleanupDocker =
@@ -125,17 +131,6 @@ runServerAndAgent callback runner = do
   Async.cancel serverThread
   Async.cancel agentThread
 
-testServerAndAgent :: Runner.Service -> IO ()
-testServerAndAgent = do
-  runServerAndAgent $ \handler -> do
-    let pipeline =
-          makePipeline
-            [ 
-              makeStep "agent-test" "busybox" ["echo hello", "echo from agent"]
-            ]
-    number <- handler.queueJob pipeline
-    checkBuild handler number
-
 checkBuild :: JobHandler.Service -> BuildNumber -> IO ()
 checkBuild handler number = loop
   where
@@ -147,6 +142,34 @@ checkBuild handler number = loop
             BuildFinished s -> s `shouldBe` BuildSucceeded
             _               -> loop
         _ -> loop
+
+testServerAndAgent :: Runner.Service -> IO ()
+testServerAndAgent = do
+  runServerAndAgent $ \handler -> do
+    let pipeline =
+          makePipeline
+            [ 
+              makeStep "agent-test" "busybox" ["echo hello", "echo from agent"]
+            ]
+    number <- handler.queueJob pipeline
+    checkBuild handler number
+
+testWebhookTrigger :: Runner.Service -> IO ()
+testWebhookTrigger =
+  runServerAndAgent $ \handler -> do
+    base <- HTTP.parseRequest "http://localhost:9000"
+    let req = base
+            & HTTP.setRequestMethod "POST"
+            & HTTP.setRequestPath "/webhook/github"
+            & HTTP.setRequestBodyFile "test/github-payload.sample.json"
+    res <- HTTP.httpBS req
+    let body = HTTP.getResponseBody res
+    case Aeson.eitherDecodeStrict body of
+      Left e -> throwString e
+      Right (Aeson.Object build) -> do
+        case Aeson.KeyMap.lookup "number" build of
+          Nothing -> throwString "Build number is not found in the webhook response"
+          Just (Aeson.Number number) -> checkBuild handler $ Core.BuildNumber (round number)
 
 main :: IO ()
 main =
@@ -162,3 +185,4 @@ main =
         it "should pull image" do testImagePull runner
         it "should decode yaml config into pipeline" do testYamlDecoding runner
         it "should run server and agent" do testServerAndAgent runner
+        it "should process webhook" do testWebhookTrigger runner
