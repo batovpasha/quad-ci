@@ -1,15 +1,16 @@
 module Server where
 
-import qualified Codec.Serialise    as Serialise
+import qualified Codec.Serialise            as Serialise
 import           Core
 import qualified JobHandler
 import           RIO
-import qualified RIO.Map            as Map
-import qualified RIO.NonEmpty       as NonEmpty
-import qualified Web.Scotty         as Scotty
+import qualified RIO.Map                     as Map
+import qualified RIO.NonEmpty                as NonEmpty
+import qualified Web.Scotty                  as Scotty
 import qualified Github
-import qualified Data.Aeson         as Aeson
-import qualified Network.HTTP.Types as HTTP.Types
+import qualified Data.Aeson                  as Aeson
+import qualified Network.HTTP.Types          as HTTP.Types
+import qualified Network.Wai.Middleware.Cors as Cors
 
 data Config = Config
   { port :: Int
@@ -31,7 +32,7 @@ jobToJson number job =
       Aeson.object
         [ ("name", Aeson.String $ Core.stepNameToText step.name)
         , ("state", Aeson.String $ case build of
-             Just b -> stepStateToText b step 
+             Just b -> stepStateToText b step
              Nothing -> "ready"
           )
         ]
@@ -68,8 +69,9 @@ stepStateToText build step =
 run :: Config -> JobHandler.Service -> IO ()
 run config handler =
   Scotty.scotty config.port do
+    Scotty.middleware Cors.simpleCors
     Scotty.post "/agent/pull" do
-      cmd <- Scotty.liftAndCatchIO do 
+      cmd <- Scotty.liftAndCatchIO do
         handler.dispatchCmd
       Scotty.raw $ Serialise.serialise cmd
     Scotty.post "/agent/send" do
@@ -102,3 +104,6 @@ run config handler =
       step <- StepName <$> Scotty.param "step"
       log <- Scotty.liftAndCatchIO $ handler.fetchLogs number step
       Scotty.raw $ fromStrictBytes $ fromMaybe "" log
+    Scotty.get "/build" do
+      jobs <- Scotty.liftAndCatchIO $ handler.latestJobs
+      Scotty.json $ jobs <&> uncurry jobToJson
