@@ -21,8 +21,8 @@ createService = do
   pure
     JobHandler.Service
       { queueJob =
-          \pipeline ->
-            STM.atomically do STM.stateTVar state $ queueJob_ pipeline
+          \info pipeline ->
+            STM.atomically do STM.stateTVar state $ queueJob_ info pipeline
       , findJob =
           \number ->
             STM.atomically $ do
@@ -39,11 +39,15 @@ createService = do
           pure $ latestJobs_ s
       }
 
-queueJob_ :: Pipeline -> State -> (BuildNumber, State)
-queueJob_ pipeline state = (number, updatedState)
+queueJob_ :: JobHandler.CommitInfo -> Pipeline -> State -> (BuildNumber, State)
+queueJob_ info pipeline state = (number, updatedState)
   where
     number = BuildNumber state.nextBuild
-    job = JobHandler.Job {pipeline = pipeline, state = JobHandler.JobQueued}
+    job = JobHandler.Job 
+      { pipeline = pipeline
+      , state = JobHandler.JobQueued
+      , info = info
+      }
     updatedState =
       state
         { jobs = Map.insert number job state.jobs

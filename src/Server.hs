@@ -21,6 +21,7 @@ jobToJson number job =
   Aeson.object
     [ ("number", Aeson.toJSON $ Core.buildNumberToInt number)
     , ("state", Aeson.toJSON $ jobStateToText job.state)
+    , ("info", Aeson.toJSON job.info)
     , ("steps", Aeson.toJSON steps)
     ]
   where
@@ -86,7 +87,7 @@ run config handler =
         pipeline <- Github.fetchRemotePipeline info
         let repoCloneStep = Github.createCloneStep info
         let pipelineWithCloneStep = pipeline{steps = NonEmpty.cons repoCloneStep pipeline.steps}
-        handler.queueJob pipelineWithCloneStep
+        handler.queueJob info pipelineWithCloneStep
       Scotty.json $
         Aeson.object
         [ ("number", Aeson.toJSON $ Core.buildNumberToInt number)
