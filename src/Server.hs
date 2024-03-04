@@ -11,6 +11,7 @@ import qualified Github
 import qualified Data.Aeson                  as Aeson
 import qualified Network.HTTP.Types          as HTTP.Types
 import qualified Network.Wai.Middleware.Cors as Cors
+import qualified System.Log.Logger           as Logger
 
 data Config = Config
   { port :: Int
@@ -87,7 +88,10 @@ run config handler =
         pipeline <- Github.fetchRemotePipeline info
         let repoCloneStep = Github.createCloneStep info
         let pipelineWithCloneStep = pipeline{steps = NonEmpty.cons repoCloneStep pipeline.steps}
-        handler.queueJob info pipelineWithCloneStep
+        number <- handler.queueJob info pipelineWithCloneStep
+        Logger.infoM "quad.server" $ "Queued job "
+          <> Core.displayBuildNumber number
+        pure number
       Scotty.json $
         Aeson.object
         [ ("number", Aeson.toJSON $ Core.buildNumberToInt number)

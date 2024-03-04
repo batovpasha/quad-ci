@@ -46,8 +46,13 @@ runCommand config runner cmd =
                 buildUpdated = \build -> do
                   sendMessage config $ BuildUpdated number build
               }
+      let n = Core.displayBuildNumber number
+      Logger.infoM "quad.agent" $ "Start build " <> n
+
       build <- runner.prepareBuild pipeline
       void $ runner.runBuild hooks build
+
+      Logger.infoM "quad.agent" $ "Finished build " <> n
 
 sendMessage :: Config -> Msg -> IO ()
 sendMessage config msg = do
