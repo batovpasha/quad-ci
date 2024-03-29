@@ -105,16 +105,12 @@ progress docker build =
                 Text.unlines $ ["set -ex"] <> NonEmpty.toList step.commands
           let options =
                 Docker.CreateContainerOptions
-                  { image = step.image
-                  , script = script
-                  , volume = build.volume
-                  }
+                  {image = step.image, script = script, volume = build.volume}
           docker.pullImage step.image
           containerId <- docker.createContainer options
           docker.startContainer containerId
           let s =
-                BuildRunningState
-                  {step = step.name, containerId = containerId}
+                BuildRunningState {step = step.name, containerId = containerId}
           pure $ build {state = BuildRunning s}
     BuildRunning state -> do
       status <- docker.containerStatus state.containerId

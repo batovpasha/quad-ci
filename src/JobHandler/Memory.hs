@@ -31,23 +31,24 @@ createService = do
       , dispatchCmd = STM.atomically do STM.stateTVar state dispatchCmd_
       , processMsg =
           \msg -> STM.atomically do STM.modifyTVar' state $ processMsg_ msg
-      , fetchLogs = \number step -> STM.atomically do
-          s <- STM.readTVar state
-          pure $ fetchLogs_ number step s
-      , latestJobs = STM.atomically do
-          s <- STM.readTVar state
-          pure $ latestJobs_ s
+      , fetchLogs =
+          \number step ->
+            STM.atomically
+              do s <- STM.readTVar state
+                 pure $ fetchLogs_ number step s
+      , latestJobs =
+          STM.atomically
+            do s <- STM.readTVar state
+               pure $ latestJobs_ s
       }
 
 queueJob_ :: JobHandler.CommitInfo -> Pipeline -> State -> (BuildNumber, State)
 queueJob_ info pipeline state = (number, updatedState)
   where
     number = BuildNumber state.nextBuild
-    job = JobHandler.Job 
-      { pipeline = pipeline
-      , state = JobHandler.JobQueued
-      , info = info
-      }
+    job =
+      JobHandler.Job
+        {pipeline = pipeline, state = JobHandler.JobQueued, info = info}
     updatedState =
       state
         { jobs = Map.insert number job state.jobs
@@ -64,7 +65,7 @@ dispatchCmd_ state =
       let updatedJob = job{state = JobHandler.JobAssigned}
           updatedState = Map.insert number updatedJob state.jobs
           cmd = Just $ Agent.StartBuild number job.pipeline
-       in (cmd, state{jobs = updatedState})
+       in (cmd, state {jobs = updatedState})
     _ -> (Nothing, state)
   where
     isQueued (_, job) = job.state == JobHandler.JobQueued
@@ -74,11 +75,15 @@ processMsg_ msg state =
   case msg of
     Agent.BuildUpdated number build ->
       let f job = job{state = JobHandler.JobScheduled build}
-       in state{jobs = Map.adjust f number state.jobs}
+       in state {jobs = Map.adjust f number state.jobs}
     Agent.LogCollected number log ->
       let updatedLogs =
-            Map.insertWith (flip mappend) (number, log.step) log.output state.logs
-       in state{logs = updatedLogs}
+            Map.insertWith
+              (flip mappend)
+              (number, log.step)
+              log.output
+              state.logs
+       in state {logs = updatedLogs}
 
 fetchLogs_ :: BuildNumber -> StepName -> State -> Maybe ByteString
 fetchLogs_ number step state = Map.lookup (number, step) state.logs

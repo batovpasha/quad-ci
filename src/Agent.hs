@@ -40,26 +40,24 @@ runCommand config runner cmd =
     StartBuild number pipeline -> do
       let hooks =
             Runner.Hooks
-              {
-                logCollected = \log -> do
-                  sendMessage config $ LogCollected number log,
-                buildUpdated = \build -> do
-                  sendMessage config $ BuildUpdated number build
+              { logCollected =
+                  \log -> do
+                    sendMessage config $ LogCollected number log
+              , buildUpdated =
+                  \build -> do
+                    sendMessage config $ BuildUpdated number build
               }
       let n = Core.displayBuildNumber number
       Logger.infoM "quad.agent" $ "Start build " <> n
-
       build <- runner.prepareBuild pipeline
       void $ runner.runBuild hooks build
-
       Logger.infoM "quad.agent" $ "Finished build " <> n
 
 sendMessage :: Config -> Msg -> IO ()
 sendMessage config msg = do
   base <- HTTP.parseRequest config.endpoint
   let body = Serialise.serialise msg
-  let req = base 
-          & HTTP.setRequestMethod "POST" 
-          & HTTP.setRequestPath "/agent/send"
-          & HTTP.setRequestBodyLBS body
+  let req =
+        base & HTTP.setRequestMethod "POST" & HTTP.setRequestPath "/agent/send" &
+        HTTP.setRequestBodyLBS body
   void $ HTTP.httpBS req

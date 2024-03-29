@@ -1,13 +1,19 @@
 import qualified Agent
 import qualified Control.Concurrent.Async as Async
 import           Core
+import           Data.Aeson               ((.:))
+import qualified Data.Aeson               as Aeson
+import qualified Data.Aeson.KeyMap        as Aeson.KeyMap
+import qualified Data.Aeson.Types         as Aeson.Types
 import qualified Data.Yaml                as Yaml
 import           Docker
 import qualified JobHandler
 import qualified JobHandler.Memory
+import qualified Network.HTTP.Simple      as HTTP
 import           Prelude
 import           RIO
 import qualified RIO.ByteString           as ByteString
+import qualified RIO.HashMap              as HashMap
 import qualified RIO.Map                  as Map
 import qualified RIO.NonEmpty.Partial     as NonEmpty.Partial
 import qualified RIO.Set                  as Set
@@ -15,12 +21,6 @@ import qualified Runner
 import qualified Server
 import qualified System.Process.Typed     as Process
 import           Test.Hspec
-import qualified Data.Aeson               as Aeson
-import qualified Data.Aeson.KeyMap        as Aeson.KeyMap
-import           Data.Aeson ((.:))
-import qualified Data.Aeson.Types         as Aeson.Types
-import qualified Network.HTTP.Simple      as HTTP
-import qualified RIO.HashMap              as HashMap
 
 cleanupDocker :: IO ()
 cleanupDocker =
@@ -43,7 +43,8 @@ makePipeline :: [Step] -> Pipeline
 makePipeline steps = Pipeline {steps = NonEmpty.Partial.fromList steps}
 
 emptyHooks :: Runner.Hooks
-emptyHooks = Runner.Hooks {logCollected = \_ -> pure (), buildUpdated = \_ -> pure ()}
+emptyHooks =
+  Runner.Hooks {logCollected = \_ -> pure (), buildUpdated = \_ -> pure ()}
 
 testRunSuccess :: Runner.Service -> IO ()
 testRunSuccess runner = do
@@ -88,7 +89,7 @@ testLogCollection runner = do
         forM_ remaining $ \word -> do
           case ByteString.breakSubstring word log.output of
             (_, "") -> pure ()
-            _       -> modifyMVar_ expected (pure.Set.delete word)
+            _       -> modifyMVar_ expected (pure . Set.delete word)
   let hooks = Runner.Hooks {logCollected = onLog, buildUpdated = traceShowIO}
   build <-
     runner.prepareBuild $
@@ -121,11 +122,10 @@ testYamlDecoding runner = do
 runServerAndAgent :: (JobHandler.Service -> IO ()) -> Runner.Service -> IO ()
 runServerAndAgent callback runner = do
   handler <- JobHandler.Memory.createService
-  serverThread <- Async.async do
-    Server.run (Server.Config 9000) handler
+  serverThread <- Async.async do Server.run (Server.Config 9000) handler
   Async.link serverThread
-  agentThread <- Async.async do
-    Agent.run (Agent.Config "http://localhost:9000") runner
+  agentThread <-
+    Async.async do Agent.run (Agent.Config "http://localhost:9000") runner
   Async.link agentThread
   callback handler
   Async.cancel serverThread
@@ -148,17 +148,15 @@ testServerAndAgent = do
   runServerAndAgent $ \handler -> do
     let pipeline =
           makePipeline
-            [ 
-              makeStep "agent-test" "busybox" ["echo hello", "echo from agent"]
-            ]
-    let info = 
-      JobHandler.CommitInfo
-      { sha = "00000"
-      , branch = "master"
-      , message = "test commit"
-      , author = "quad"
-      , repo = "quad-ci/quad"
-      }
+            [makeStep "agent-test" "busybox" ["echo hello", "echo from agent"]]
+    let info =
+          JobHandler.CommitInfo
+            { sha = "00000"
+            , branch = "master"
+            , message = "test commit"
+            , author = "quad"
+            , repo = "quad-ci/quad"
+            }
     number <- handler.queueJob info pipeline
     checkBuild handler number
 
@@ -166,18 +164,20 @@ testWebhookTrigger :: Runner.Service -> IO ()
 testWebhookTrigger =
   runServerAndAgent $ \handler -> do
     base <- HTTP.parseRequest "http://localhost:9000"
-    let req = base
-            & HTTP.setRequestMethod "POST"
-            & HTTP.setRequestPath "/webhook/github"
-            & HTTP.setRequestBodyFile "test/github-payload.sample.json"
+    let req =
+          base & HTTP.setRequestMethod "POST" &
+          HTTP.setRequestPath "/webhook/github" &
+          HTTP.setRequestBodyFile "test/github-payload.sample.json"
     res <- HTTP.httpBS req
     let body = HTTP.getResponseBody res
     case Aeson.eitherDecodeStrict body of
       Left e -> throwString e
       Right (Aeson.Object build) -> do
         case Aeson.KeyMap.lookup "number" build of
-          Nothing -> throwString "Build number is not found in the webhook response"
-          Just (Aeson.Number number) -> checkBuild handler $ Core.BuildNumber (round number)
+          Nothing ->
+            throwString "Build number is not found in the webhook response"
+          Just (Aeson.Number number) ->
+            checkBuild handler $ Core.BuildNumber (round number)
 
 main :: IO ()
 main =

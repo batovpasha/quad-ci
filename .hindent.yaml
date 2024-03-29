@@ -1,0 +1,8 @@
+indent-size: 2
+line-length: 80
+force-trailing-newline: true
+sort-imports: true
+line-breaks: []
+extensions:
+- OverloadedRecordDot
+- OverloadedRecordUpdate
