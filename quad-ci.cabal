@@ -32,7 +32,6 @@ library
       Github
       JobHandler
       JobHandler.Memory
-      Lib
       Runner
       Server
       Socket
